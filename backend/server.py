@@ -35,10 +35,8 @@ app.add_middleware(
 client = AsyncIOMotorClient(os.environ.get("MONGO_URL"))
 db = client.feelori_assistant
 
-# AI Models Configuration
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-gemini_model = genai.GenerativeModel('gemini-1.5-flash')
-openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+# AI Models Configuration - Initialize lazily
+# Models are now initialized within the generate_ai_response function to handle missing API keys gracefully
 
 # WhatsApp Business API Configuration
 WHATSAPP_TOKEN = os.environ.get("WHATSAPP_ACCESS_TOKEN")
