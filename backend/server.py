@@ -11,6 +11,10 @@ from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 from typing import Optional, List, Dict, Any, Annotated
 
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+
 import httpx
 import google.generativeai as genai
 from fastapi import FastAPI, HTTPException, Request, Depends, Security, status
