@@ -143,6 +143,20 @@ class FeeloriAPITester:
             data={
                 "phone_number": "+1234567890",
                 "message": "Test message from API test"
+            },
+            auth_required=True
+        )
+
+    def test_send_message_no_auth(self):
+        """Test send message without authentication"""
+        return self.run_test(
+            "Send Message (No Auth)",
+            "POST",
+            "api/send-message",
+            401,
+            data={
+                "phone_number": "+1234567890",
+                "message": "Test message from API test"
             }
         )
 
@@ -152,11 +166,12 @@ class FeeloriAPITester:
             "Send Message (Invalid Data)",
             "POST",
             "api/send-message",
-            400,
+            422,
             data={
-                "phone_number": "",
+                "phone_number": "invalid-phone",
                 "message": ""
-            }
+            },
+            auth_required=True
         )
 
     def test_get_customer(self):
@@ -165,7 +180,17 @@ class FeeloriAPITester:
             "Get Customer",
             "GET",
             "api/customers/+1234567890",
-            200
+            200,
+            auth_required=True
+        )
+
+    def test_get_customer_no_auth(self):
+        """Test get customer without authentication"""
+        return self.run_test(
+            "Get Customer (No Auth)",
+            "GET",
+            "api/customers/+1234567890",
+            401
         )
 
     def test_get_orders(self):
@@ -174,7 +199,36 @@ class FeeloriAPITester:
             "Get Orders",
             "GET",
             "api/orders/+1234567890",
-            200
+            200,
+            auth_required=True
+        )
+
+    def test_get_orders_no_auth(self):
+        """Test get orders without authentication"""
+        return self.run_test(
+            "Get Orders (No Auth)",
+            "GET",
+            "api/orders/+1234567890",
+            401
+        )
+
+    def test_get_metrics(self):
+        """Test get metrics endpoint"""
+        return self.run_test(
+            "Get Metrics",
+            "GET",
+            "api/metrics",
+            200,
+            auth_required=True
+        )
+
+    def test_get_metrics_no_auth(self):
+        """Test get metrics without authentication"""
+        return self.run_test(
+            "Get Metrics (No Auth)",
+            "GET",
+            "api/metrics",
+            401
         )
 
     def test_webhook_post(self):
