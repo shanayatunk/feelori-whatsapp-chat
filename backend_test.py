@@ -6,6 +6,7 @@ from datetime import datetime
 class FeeloriAPITester:
     def __init__(self, base_url="https://f1c9e568-ed1b-46b6-b3d4-ed6c9c6dd7c1.preview.emergentagent.com"):
         self.base_url = base_url
+        self.api_key = "feelori-admin-2024-secure-key-change-in-production"
         self.tests_run = 0
         self.tests_passed = 0
         self.test_results = []
