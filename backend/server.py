@@ -151,7 +151,7 @@ class PhoneNumber(str):
         return core_schema.str_schema(min_length=1, max_length=20)
 
 class WhatsAppMessage(BaseModel):
-    from_number: PhoneNumber
+    from_number: str = Field(..., pattern=r'^\+\d{10,15}$')
     message_text: str = Field(..., min_length=1, max_length=4096)
     message_id: str = Field(..., min_length=1, max_length=255)
     timestamp: str
@@ -166,7 +166,7 @@ class WebhookData(BaseModel):
 
 class Customer(BaseModel):
     id: Optional[str] = None
-    phone_number: PhoneNumber
+    phone_number: str = Field(..., pattern=r'^\+\d{10,15}$')
     name: Optional[str] = Field(None, max_length=100)
     email: Optional[EmailStr] = None
     created_at: Optional[datetime] = None
@@ -185,7 +185,7 @@ class Product(BaseModel):
     available: bool = True
 
 class SendMessageRequest(BaseModel):
-    phone_number: PhoneNumber
+    phone_number: str = Field(..., pattern=r'^\+\d{10,15}$')
     message: str = Field(..., min_length=1, max_length=4096)
 
 class APIResponse(BaseModel):
