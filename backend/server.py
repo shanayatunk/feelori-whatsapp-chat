@@ -142,16 +142,13 @@ def validate_phone_number(phone: str) -> str:
     
     return clean_phone
 
+from pydantic import field_validator, ValidationInfo
+
 class PhoneNumber(str):
     @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-    
-    @classmethod
-    def validate(cls, v):
-        if not isinstance(v, str):
-            raise TypeError('string required')
-        return validate_phone_number(v)
+    def __get_pydantic_core_schema__(cls, source_type: Any, handler) -> Any:
+        from pydantic_core import core_schema
+        return core_schema.str_schema(min_length=1, max_length=20)
 
 class WhatsAppMessage(BaseModel):
     from_number: PhoneNumber
