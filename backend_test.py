@@ -307,11 +307,18 @@ def main():
     
     print("\n💬 Testing Message Functionality...")
     tester.test_send_message()
+    tester.test_send_message_no_auth()
     tester.test_send_message_invalid()
     
     print("\n👥 Testing Customer & Order Management...")
     tester.test_get_customer()
+    tester.test_get_customer_no_auth()
     tester.test_get_orders()
+    tester.test_get_orders_no_auth()
+    
+    print("\n📊 Testing Metrics & Analytics...")
+    tester.test_get_metrics()
+    tester.test_get_metrics_no_auth()
     
     # Print summary
     tester.print_summary()
