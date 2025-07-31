@@ -270,6 +270,20 @@ async def update_conversation_history(phone_number: str, message: str, response:
 async def generate_ai_response(message: str, customer: Customer, context: Dict = None) -> str:
     """Generate AI response using Gemini with OpenAI fallback"""
     
+    # Get AI models lazily
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    
+    gemini_model = None
+    openai_client = None
+    
+    if gemini_key:
+        genai.configure(api_key=gemini_key)
+        gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+        
+    if openai_key:
+        openai_client = AsyncOpenAI(api_key=openai_key)
+    
     # Build context for AI
     conversation_context = ""
     if customer.conversation_history:
@@ -318,27 +332,33 @@ Customer message: {message}
 Respond helpfully and naturally:"""
 
     try:
-        # Try Gemini first
-        response = await asyncio.to_thread(
-            gemini_model.generate_content, system_prompt
-        )
-        return response.text
+        # Try Gemini first if available
+        if gemini_model:
+            response = await asyncio.to_thread(
+                gemini_model.generate_content, system_prompt
+            )
+            return response.text
+        else:
+            raise Exception("Gemini model not available")
         
     except Exception as e:
         logger.warning(f"Gemini failed, trying OpenAI: {str(e)}")
         
         try:
-            # Fallback to OpenAI
-            response = await openai_client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are Feelori's AI customer service assistant. Be helpful, friendly, and professional."},
-                    {"role": "user", "content": system_prompt}
-                ],
-                max_tokens=500,
-                temperature=0.7
-            )
-            return response.choices[0].message.content
+            # Fallback to OpenAI if available
+            if openai_client:
+                response = await openai_client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": "You are Feelori's AI customer service assistant. Be helpful, friendly, and professional."},
+                        {"role": "user", "content": system_prompt}
+                    ],
+                    max_tokens=500,
+                    temperature=0.7
+                )
+                return response.choices[0].message.content
+            else:
+                raise Exception("OpenAI client not available")
             
         except Exception as e2:
             logger.error(f"Both AI models failed: {str(e2)}")
