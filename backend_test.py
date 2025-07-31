@@ -11,14 +11,20 @@ class FeeloriAPITester:
         self.tests_passed = 0
         self.test_results = []
 
-    def run_test(self, name, method, endpoint, expected_status, data=None, params=None):
+    def run_test(self, name, method, endpoint, expected_status, data=None, params=None, auth_required=False):
         """Run a single API test"""
         url = f"{self.base_url}/{endpoint}"
         headers = {'Content-Type': 'application/json'}
+        
+        # Add authentication header if required
+        if auth_required:
+            headers['Authorization'] = f'Bearer {self.api_key}'
 
         self.tests_run += 1
         print(f"\n🔍 Testing {name}...")
         print(f"   URL: {url}")
+        if auth_required:
+            print(f"   Auth: Required")
         
         try:
             if method == 'GET':
