@@ -22,6 +22,9 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: true,
+      allowedHosts: [
+        "496955ca-aa39-4399-9071-3dc797aacf6f.preview.emergentagent.com"
+      ],
       proxy: {
         '/api': {
           target: env.VITE_BACKEND_URL || 'http://localhost:8001',
