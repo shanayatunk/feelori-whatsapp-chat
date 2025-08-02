@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
         '@/types': path.resolve(__dirname, './src/types'),
         '@/utils': path.resolve(__dirname, './src/utils'),
       },
+      extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
     },
     server: {
       port: 3000,
