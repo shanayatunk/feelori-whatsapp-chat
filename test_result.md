@@ -191,7 +191,6 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Backend API Testing"
     - "Frontend Integration Testing"
   stuck_tasks: []
   test_all: false
