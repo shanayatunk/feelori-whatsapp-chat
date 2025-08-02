@@ -10,6 +10,11 @@ interface UseApiReturn<T = any> {
   reset: () => void;
 }
 
+/**
+ * A generic hook for making API calls using axios.
+ * It handles loading, error, and data states.
+ * @returns An object with the current data, loading state, error state, and an execute function to make API calls.
+ */
 export function useApi<T = any>(): UseApiReturn<T> {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
@@ -100,12 +105,11 @@ export function useProducts() {
 export function useSendMessage() {
   const { execute, ...rest } = useApi();
 
-  const sendMessage = useCallback((phoneNumber: string, message: string, apiKey: string) => {
+  const sendMessage = useCallback((phoneNumber: string, message: string) => {
     return execute({
       method: 'POST',
       url: '/send-message',
       data: { phone_number: phoneNumber, message },
-      headers: { Authorization: `Bearer ${apiKey}` },
     });
   }, [execute]);
 
@@ -115,11 +119,10 @@ export function useSendMessage() {
 export function useCustomer() {
   const { execute, ...rest } = useApi();
 
-  const getCustomer = useCallback((phoneNumber: string, apiKey: string) => {
+  const getCustomer = useCallback((phoneNumber: string) => {
     return execute({
       method: 'GET',
       url: `/customers/${encodeURIComponent(phoneNumber)}`,
-      headers: { Authorization: `Bearer ${apiKey}` },
     });
   }, [execute]);
 
@@ -129,13 +132,38 @@ export function useCustomer() {
 export function useOrders() {
   const { execute, ...rest } = useApi();
 
-  const getOrders = useCallback((phoneNumber: string, apiKey: string) => {
+  const getOrders = useCallback((phoneNumber: string) => {
     return execute({
       method: 'GET',
       url: `/orders/${encodeURIComponent(phoneNumber)}`,
-      headers: { Authorization: `Bearer ${apiKey}` },
     });
   }, [execute]);
 
   return { getOrders, ...rest };
+}
+
+export function useDashboardStats() {
+  const { execute, ...rest } = useApi();
+
+  const getStats = useCallback(() => {
+    return execute({
+      method: 'GET',
+      url: '/dashboard/stats',
+    });
+  }, [execute]);
+
+  return { getStats, ...rest };
+}
+
+export function useRecentMessages() {
+  const { execute, ...rest } = useApi();
+
+  const getMessages = useCallback(() => {
+    return execute({
+      method: 'GET',
+      url: '/dashboard/recent-messages',
+    });
+  }, [execute]);
+
+  return { getMessages, ...rest };
 }
