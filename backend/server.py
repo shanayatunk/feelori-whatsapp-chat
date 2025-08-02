@@ -597,6 +597,9 @@ async def verify_webhook(request: Request):
         else:
             logger.warning("Webhook verification failed")
             raise HTTPException(status_code=403, detail="Verification failed")
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as e:
         logger.error(f"Webhook verification error: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
