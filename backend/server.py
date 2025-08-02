@@ -7,6 +7,8 @@ import hmac
 import uuid
 import re
 import asyncio
+
+
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 from typing import Optional, List, Dict, Any, Annotated
@@ -20,7 +22,7 @@ import google.generativeai as genai
 from fastapi import FastAPI, HTTPException, Request, Depends, Security, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -35,10 +37,7 @@ from slowapi.middleware import SlowAPIMiddleware
 logging.basicConfig(
     level=logging.INFO,
     format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s", "module": "%(name)s"}',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('/var/log/feelori_assistant.log') if os.path.exists('/var/log') else logging.StreamHandler()
-    ]
+    handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger(__name__)
 
@@ -94,14 +93,19 @@ app = FastAPI(
 )
 
 # Security middleware
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])  # Configure with actual domains in production
+allowed_hosts = os.environ.get("ALLOWED_HOSTS", "").split(",")
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=[host for host in allowed_hosts if host]
+)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(SlowAPIMiddleware)
 
 # CORS middleware
+cors_origins = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure with actual domains in production
+    allow_origins=[origin for origin in cors_origins if origin],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -112,12 +116,20 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Database connection
-client = AsyncIOMotorClient(os.environ.get("MONGO_URL"))
-db = client.feelori_assistant
+mongo_uri = os.environ.get("MONGO_ATLAS_URI") or os.environ.get("MONGO_URL")
+if not mongo_uri:
+    logger.critical("MONGO_ATLAS_URI or MONGO_URL environment variable not set. Application will not start.")
+    sys.exit(1)
+
+client = AsyncIOMotorClient(mongo_uri)
+db = client.get_default_database()
 
 # Security
 security = HTTPBearer()
-API_KEY = os.environ.get("ADMIN_API_KEY", "admin-secret-key-change-in-production")
+API_KEY = os.environ.get("ADMIN_API_KEY")
+if not API_KEY:
+    logger.critical("ADMIN_API_KEY environment variable not set. Application will not start.")
+    sys.exit(1)
 
 # WhatsApp Business API Configuration
 WHATSAPP_TOKEN = os.environ.get("WHATSAPP_ACCESS_TOKEN")
@@ -136,7 +148,11 @@ def validate_phone_number(phone: str) -> str:
     # Remove all non-digit characters except +
     clean_phone = re.sub(r'[^\d+]', '', phone)
     
-    # Check if it starts with + and has 10-15 digits
+    # If no + at start, add it (WhatsApp sends without + sometimes)
+    if not clean_phone.startswith('+'):
+        clean_phone = '+' + clean_phone
+    
+    # Check if it's in valid international format
     if not re.match(r'^\+\d{10,15}$', clean_phone):
         raise ValueError("Invalid phone number format. Must be +[country_code][number] with 10-15 digits.")
     
@@ -230,7 +246,7 @@ async def send_whatsapp_message(to_number: str, message: str) -> bool:
             "text": {"body": message}
         }
         
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
             response = await client.post(WHATSAPP_API_URL, headers=headers, json=payload)
             
         if response.status_code == 200:
@@ -247,8 +263,8 @@ async def send_whatsapp_message(to_number: str, message: str) -> bool:
         logger.error(f"Error sending WhatsApp message to {to_number}: {str(e)}")
         return False
 
-async def get_shopify_products(query: str = "", limit: int = 10) -> List[Product]:
-    """Fetch products from Shopify with enhanced error handling"""
+async def get_shopify_products(query: str = "", limit: int = 10, max_price: Optional[float] = None) -> List[Product]:
+    """Fetch products from Shopify with enhanced error handling and proper search"""
     try:
         if not SHOPIFY_ACCESS_TOKEN:
             logger.error("Shopify access token not configured")
@@ -261,10 +277,10 @@ async def get_shopify_products(query: str = "", limit: int = 10) -> List[Product
         
         params = {"limit": min(limit, 250)}  # Shopify max limit
         
-        if query:
-            params["title"] = query
+        # Use the 'fields' parameter to limit response size and improve performance
+        params["fields"] = "id,title,handle,body_html,variants,images,tags,vendor,product_type"
         
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
             response = await client.get(
                 f"{SHOPIFY_API_URL}/products.json",
                 headers=headers,
@@ -294,12 +310,31 @@ async def get_shopify_products(query: str = "", limit: int = 10) -> List[Product
                         tags=product_data.get("tags", "").split(",")[:20] if product_data.get("tags") else [],
                         available=any(v.get("inventory_quantity", 0) > 0 for v in variants) if variants else False
                     )
-                    products.append(product)
+                    add_product = False
+                    # If there's a query, filter products locally
+                    if query:
+                        query_lower = query.lower()
+                        product_text = f"{product.title} {product.description} {' '.join(product.tags)} {product_data.get('vendor', '')} {product_data.get('product_type', '')}".lower()
+                        
+                        # Check if any word in the query matches the product
+                        query_words = query_lower.split()
+                        if any(word in product_text for word in query_words if len(word) > 2):
+                            add_product = True
+                    else:
+                        add_product = True
+                    # --- New Price Filtering Logic ---
+                    if add_product and max_price is not None:
+                        # If the product's price is higher than the limit, don't add it
+                        if float(product.price) > max_price:
+                            add_product = False
+                    # --- End of New Logic ---
+                    if add_product:
+                        products.append(product)
                 except Exception as e:
                     logger.warning(f"Error processing product {product_data.get('id', 'unknown')}: {str(e)}")
                     continue
             
-            logger.info(f"Retrieved {len(products)} products from Shopify")
+            logger.info(f"Retrieved {len(products)} products from Shopify (filtered: {bool(query)})")
             return products
         else:
             logger.error(f"Failed to fetch Shopify products: {response.status_code} - {response.text}")
@@ -323,7 +358,7 @@ async def get_shopify_order(order_id: str) -> Optional[Dict]:
             "Content-Type": "application/json"
         }
         
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
             response = await client.get(
                 f"{SHOPIFY_API_URL}/orders/{order_id}.json",
                 headers=headers
@@ -352,7 +387,7 @@ async def search_orders_by_phone(phone_number: str) -> List[Dict]:
         
         clean_phone = re.sub(r'[^\d]', '', phone_number)
         
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
             response = await client.get(
                 f"{SHOPIFY_API_URL}/orders.json",
                 headers=headers,
@@ -441,6 +476,417 @@ async def update_conversation_history(phone_number: str, message: str, response:
     except Exception as e:
         logger.error(f"Error updating conversation history for {phone_number}: {str(e)}")
 
+import json
+import httpx
+from typing import List, Dict, Optional
+
+async def send_product_catalog_message(to_number: str, products: List[Product], header_text: str = "Here are some products you might like:") -> bool:
+    """Send interactive product catalog message via WhatsApp Business API"""
+    try:
+        if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_ID:
+            logger.error("WhatsApp credentials not configured")
+            return False
+        
+        # Check if catalog is configured
+        catalog_id = os.environ.get("WHATSAPP_CATALOG_ID")
+        if not catalog_id:
+            logger.info("WhatsApp catalog not configured, falling back to interactive list")
+            return await send_interactive_product_list(to_number, products, "Products")
+            
+        headers = {
+            "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        
+        # Create interactive message with product list
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": to_number,
+            "type": "interactive",
+            "interactive": {
+                "type": "product_list",
+                "header": {
+                    "type": "text",
+                    "text": header_text
+                },
+                "body": {
+                    "text": "Browse our collection and tap on any product to see more details:"
+                },
+                "footer": {
+                    "text": "Powered by Feelori"
+                },
+                "action": {
+                    "catalog_id": catalog_id,
+                    "sections": [
+                        {
+                            "title": "Featured Products",
+                            "product_items": [
+                                {
+                                    "product_retailer_id": product.id
+                                } for product in products[:10]  # WhatsApp limits to 10 products per section
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.post(WHATSAPP_API_URL, headers=headers, json=payload)
+            
+        if response.status_code == 200:
+            logger.info(f"Product catalog message sent successfully to {to_number}")
+            return True
+        else:
+            logger.error(f"Failed to send product catalog to {to_number}: {response.status_code} - {response.text}")
+            # Fallback to interactive list
+            return await send_interactive_product_list(to_number, products, "Products")
+            
+    except Exception as e:
+        logger.error(f"Error sending product catalog to {to_number}: {str(e)}")
+        # Fallback to interactive list
+        return await send_interactive_product_list(to_number, products, "Products")
+
+async def send_product_images_sequence(to_number: str, products: List[Product]) -> bool:
+    """Send a sequence of product images with details (WhatsApp-compatible alternative to carousel)"""
+    try:
+        if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_ID:
+            return False
+            
+        headers = {
+            "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        
+        # Send up to 3 products as individual image messages
+        for product in products[:3]:
+            if product.images:
+                payload = {
+                    "messaging_product": "whatsapp",
+                    "to": to_number,
+                    "type": "image",
+                    "image": {
+                        "link": product.images[0],
+                        "caption": f"🏷️ *{product.title}*\n💰 *₹{product.price}*\n\n{product.description[:200]}...\n\n🔗 https://feelori.com/products/{product.handle}"
+                    }
+                }
+                
+                async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+                    await client.post(WHATSAPP_API_URL, headers=headers, json=payload)
+                    await asyncio.sleep(1)  # Small delay between images
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error sending product images sequence: {str(e)}")
+        return False
+
+async def send_interactive_product_list(to_number: str, products: List[Product], category: str = "Products") -> bool:
+    """Send interactive list message with products"""
+    try:
+        if not products:
+            return False
+            
+        headers = {
+            "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        
+        # Create interactive list rows
+        rows = []
+        for i, product in enumerate(products[:10]):  # WhatsApp limits to 10 items
+            rows.append({
+                "id": f"product_{product.id}",
+                "title": product.title[:24],  # 24 char limit
+                "description": f"₹{product.price} • {product.description[:55]}"  # 55 char limit
+            })
+        
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": to_number,
+            "type": "interactive",
+            "interactive": {
+                "type": "list",
+                "header": {
+                    "type": "text",
+                    "text": f"🛍️ {category}"
+                },
+                "body": {
+                    "text": "Here are some great products for you! Tap 'View Products' to see the full list:"
+                },
+                "footer": {
+                    "text": "Tap any product to learn more"
+                },
+                "action": {
+                    "button": "View Products",
+                    "sections": [
+                        {
+                            "title": category,
+                            "rows": rows
+                        }
+                    ]
+                }
+            }
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.post(WHATSAPP_API_URL, headers=headers, json=payload)
+            
+        if response.status_code == 200:
+            logger.info(f"Interactive product list sent to {to_number}")
+            return True
+        else:
+            logger.error(f"Failed to send interactive list: {response.status_code} - {response.text}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error sending interactive product list: {str(e)}")
+        return False
+
+async def send_product_with_media(to_number: str, product: Product) -> bool:
+    """Send individual product with image and details"""
+    try:
+        headers = {
+            "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        
+        # First send the product image
+        if product.images:
+            image_payload = {
+                "messaging_product": "whatsapp",
+                "to": to_number,
+                "type": "image",
+                "image": {
+                    "link": product.images[0],
+                    "caption": f"🏷️ *{product.title}*\n💰 *₹{product.price}*\n\n🔗 View: https://feelori.com/products/{product.handle}"
+                }
+            }
+            
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+                await client.post(WHATSAPP_API_URL, headers=headers, json=image_payload)
+        
+        # Then send interactive buttons
+        button_payload = {
+            "messaging_product": "whatsapp",
+            "to": to_number,
+            "type": "interactive",
+            "interactive": {
+                "type": "button",
+                "body": {
+                    "text": "What would you like to do?"
+                },
+                "action": {
+                    "buttons": [
+                        {
+                            "type": "reply",
+                            "reply": {
+                                "id": f"buy_{product.id}",
+                                "title": "🛒 Buy Now"
+                            }
+                        },
+                        {
+                            "type": "reply",
+                            "reply": {
+                                "id": f"details_{product.id}",
+                                "title": "ℹ️ More Info"
+                            }
+                        },
+                        {
+                            "type": "reply",
+                            "reply": {
+                                "id": "more_products",
+                                "title": "🔍 Browse More"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.post(WHATSAPP_API_URL, headers=headers, json=button_payload)
+            
+        return response.status_code == 200
+        
+    except Exception as e:
+        logger.error(f"Error sending product with media: {str(e)}")
+        return False
+
+async def send_quick_product_summary(to_number: str, products: List[Product]) -> bool:
+    """Send a quick text summary with emojis and formatting for better readability"""
+    try:
+        if not products:
+            return False
+            
+        # Create formatted message
+        message = "🛍️ *Here are some great products for you:*\n\n"
+        
+        for i, product in enumerate(products[:5], 1):  # Limit to 5 for readability
+            # Truncate title and description for WhatsApp
+            title = product.title[:40] + "..." if len(product.title) > 40 else product.title
+            desc = product.description[:80] + "..." if len(product.description) > 80 else product.description
+            
+            message += f"*{i}. {title}*\n"
+            message += f"💰 ₹{product.price}\n"
+            message += f"📝 {desc}\n"
+            message += f"🔗 https://feelori.com/products/{product.handle}\n\n"
+        
+        message += "💬 *Reply with the product number to learn more, or ask me anything!*"
+        
+        return await send_whatsapp_message(to_number, message)
+        
+    except Exception as e:
+        logger.error(f"Error sending quick product summary: {str(e)}")
+        return False
+
+async def enhanced_process_message(phone_number: str, message: str) -> str:
+    """Enhanced message processing with rich product display"""
+    try:
+        logger.info(f"Processing message: '{message}' from {phone_number}")
+        
+        customer = await get_or_create_customer(phone_number)
+        message_lower = message.lower()
+        
+        # Handle interactive button responses
+        if message.startswith("product_"):
+            product_id = message.split("_")[1]
+            # Get specific product and send detailed view
+            products = await get_shopify_products(limit=50)
+            product = next((p for p in products if p.id == product_id), None)
+            if product:
+                await send_product_with_media(phone_number, product)
+                return ""  # Don't send additional text message
+        
+        elif message.startswith("buy_"):
+            product_id = message.split("_")[1]
+            products = await get_shopify_products(limit=50)
+            product = next((p for p in products if p.id == product_id), None)
+            if product:
+                buy_message = f"🛒 Great choice! To purchase *{product.title}* for *₹{product.price}*, please visit:\n\n🔗 https://feelori.com/products/{product.handle}\n\nNeed help with your order? Just ask! 😊"
+                await send_whatsapp_message(phone_number, buy_message)
+                return ""  # Return an empty string so the old code doesn't send a second message
+            else:
+                await send_whatsapp_message(phone_number, "Sorry, I couldn't find that product. Let me show you our latest items!")
+                return "" # Return an empty string
+        
+        elif message.startswith("details_"):
+            product_id = message.split("_")[1]
+            products = await get_shopify_products(limit=50)
+            product = next((p for p in products if p.id == product_id), None)
+            if product:
+                details_message = f"ℹ️ *Product Details*\n\n*{product.title}*\n💰 *₹{product.price}*\n\n📝 {product.description[:300]}...\n\n"
+                if product.tags:
+                    details_message += f"🏷️ Tags: {', '.join(product.tags[:5])}\n\n"
+                details_message += f"🔗 Full details: https://feelori.com/products/{product.handle}"
+                return details_message
+            else:
+                return "Sorry, I couldn't find details for that product. Let me show you our featured items!"
+        
+        elif message == "more_products":
+            products = await get_shopify_products(limit=8)
+            if products:
+                success = await send_interactive_product_list(phone_number, products, "More Products")
+                if not success:
+                    await send_quick_product_summary(phone_number, products)
+                return "Here are more great products for you! ✨"
+            else:
+                return "Let me know what you're looking for and I'll help you find it! 🔍"
+        
+        # Handle numeric responses (from quick product summary)
+        elif message.isdigit() and 1 <= int(message) <= 5:
+            products = await get_shopify_products(limit=5)
+            if products and int(message) <= len(products):
+                product = products[int(message) - 1]
+                await send_product_with_media(phone_number, product)
+                return ""  # Don't send additional text message
+        
+        # Analyze message intent for new conversations
+        context = {}
+        product_keywords = [
+            "product", "item", "buy", "purchase", "show", "looking for", "need", "want", 
+            "recommend", "sell", "available", "have", "find", "search", "browse",
+            "catalog", "store", "shop", "price", "cost", "cheap", "expensive",
+            "new", "latest", "popular", "best", "good", "quality"
+        ]
+        
+        if any(word in message_lower for word in product_keywords):
+            logger.info(f"Product search detected for message: {message}")
+
+            # --- New Price Extraction Logic ---
+            price_limit = None
+            # Find numbers in the message
+            price_match = re.search(r'(\d+)', message)
+            if price_match:
+                price_limit = float(price_match.group(1))
+
+            # --- End of New Logic ---
+    
+            # Extract search terms
+            search_words = [word for word in message_lower.split() 
+                          if word not in ["i", "want", "to", "buy", "looking", "for", "show", "me", "can", "you", "please", "need", "a", "an", "the", "under", "below", "rupees"] 
+                          and not word.isdigit() # Exclude numbers from the text query
+                          and len(word) > 2]
+            search_query = " ".join(search_words[:5])
+    
+            # Pass the price limit to the function
+            products = await get_shopify_products(query=search_query, limit=20, max_price=price_limit)
+            
+            if products:
+                # Try interactive list first
+                success = await send_interactive_product_list(phone_number, products, "Search Results")
+                if not success:
+                    # Fallback: Send product images sequence (2-3 products with images)
+                    if any(p.images for p in products[:3]):
+                        await send_product_images_sequence(phone_number, products)
+                    # Always send quick summary as backup
+                    await send_quick_product_summary(phone_number, products)
+                
+                return f"Found {len(products)} products for you! ✨"
+            else:
+                return "I couldn't find any products matching your request. Could you try describing what you're looking for differently? 🤔"
+        
+        # Default greeting with featured products
+        elif any(word in message_lower for word in ["hello", "hi", "hey", "help", "start", "begin"]):
+            products = await get_shopify_products(limit=5)
+            if products:
+                success = await send_interactive_product_list(phone_number, products, "Featured Products")
+                if not success:
+                    await send_quick_product_summary(phone_number, products)
+                return "Welcome to Feelori! 👋 Check out our featured products above. How can I help you today?"
+            else:
+                return "Welcome to Feelori! 👋 How can I help you today?"
+        
+        # Order tracking
+        elif any(word in message_lower for word in ["order", "tracking", "delivery", "shipping", "status", "track"]):
+            orders = await search_orders_by_phone(phone_number)
+            context["orders"] = orders
+            if orders:
+                order_info = "📦 *Your Recent Orders:*\n\n"
+                for order in orders[:3]:
+                    order_info += f"🛍️ Order #{order['order_number']}\n"
+                    order_info += f"💰 ₹{order['total_price']}\n"
+                    order_info += f"📋 Status: {order['financial_status']}\n"
+                    if order.get('fulfillment_status'):
+                        order_info += f"🚚 Fulfillment: {order['fulfillment_status']}\n"
+                    order_info += f"📅 {order['created_at'][:10]}\n\n"
+                
+                order_info += "Need more details about any order? Just let me know! 😊"
+                return order_info
+            else:
+                return "I couldn't find any orders associated with your phone number. If you've placed an order recently, please check your email for order confirmation or contact our support team."
+        
+        # Generate AI response for other messages
+        response = await generate_ai_response(message, customer, context)
+        await update_conversation_history(phone_number, message, response)
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error processing message from {phone_number}: {str(e)}", exc_info=True)
+        return "I'm sorry, I encountered an error processing your request. Please try again or contact our support team."
+
+
 async def generate_ai_response(message: str, customer: Customer, context: Dict = None) -> str:
     """Generate AI response using initialized models with enhanced error handling"""
     global gemini_model, openai_client
@@ -461,14 +907,14 @@ async def generate_ai_response(message: str, customer: Customer, context: Dict =
     if context and context.get("products"):
         product_context = "\nAvailable products:\n"
         for product in context["products"][:5]:
-            product_context += f"- {product.title}: ${product.price} - {product.description[:100]}...\n"
+            product_context += f"- {product.title}: ₹{product.price} - {product.description[:100]}...\n"
     
     # Build order context
     order_context = ""
     if context and context.get("orders"):
         order_context = "\nCustomer's recent orders:\n"
         for order in context["orders"][:3]:
-            order_context += f"- Order #{order['order_number']}: {order['financial_status']} - ${order['total_price']}\n"
+            order_context += f"- Order #{order['order_number']}: {order['financial_status']} - ₹{order['total_price']}\n"
     
     # Create the prompt
     system_prompt = f"""You are Feelori's AI customer service assistant. You're helpful, friendly, and knowledgeable about Feelori's products.
@@ -529,43 +975,6 @@ Respond helpfully and naturally:"""
             logger.error(f"Both AI models failed: {str(e2)}")
             return "I'm sorry, I'm having technical difficulties right now. Please try again in a moment, or contact our human support team at support@feelori.com for immediate assistance."
 
-async def process_message(phone_number: str, message: str) -> str:
-    """Process incoming message and generate response with enhanced intent detection"""
-    try:
-        customer = await get_or_create_customer(phone_number)
-        
-        # Analyze message intent
-        message_lower = message.lower()
-        context = {}
-        
-        # Product search intent
-        if any(word in message_lower for word in ["product", "item", "buy", "purchase", "show", "looking for", "need", "want", "recommend"]):
-            keywords = message_lower
-            products = await get_shopify_products(query=keywords, limit=5)
-            context["products"] = products
-        
-        # Order tracking intent
-        elif any(word in message_lower for word in ["order", "tracking", "delivery", "shipping", "status", "track"]):
-            orders = await search_orders_by_phone(phone_number)
-            context["orders"] = orders
-        
-        # General product browsing
-        elif any(word in message_lower for word in ["hello", "hi", "help", "browse", "catalog", "store"]):
-            products = await get_shopify_products(limit=5)
-            context["products"] = products
-        
-        # Generate AI response
-        response = await generate_ai_response(message, customer, context)
-        
-        # Update conversation history
-        await update_conversation_history(phone_number, message, response)
-        
-        return response
-        
-    except Exception as e:
-        logger.error(f"Error processing message from {phone_number}: {str(e)}")
-        return "I'm sorry, I encountered an error processing your request. Please try again or contact our support team."
-
 # Routes
 @app.get("/", response_model=APIResponse)
 async def root():
@@ -584,22 +993,21 @@ async def root():
 @limiter.limit("60/minute")
 async def verify_webhook(request: Request):
     """Webhook verification for WhatsApp with rate limiting"""
+    print("Inside verify_webhook")
     try:
         mode = request.query_params.get("hub.mode")
         token = request.query_params.get("hub.verify_token")
         challenge = request.query_params.get("hub.challenge")
         
-        logger.info(f"Webhook verification attempt - mode: {mode}, token: {token[:20]}..." if token else "no token")
+        logger.info(f"Webhook verification attempt - mode: {mode}, token: {token}, challenge: {challenge}, verify_token: {WHATSAPP_VERIFY_TOKEN}")
         
         if mode == "subscribe" and token == WHATSAPP_VERIFY_TOKEN:
             logger.info("Webhook verified successfully")
-            return int(challenge)
+            # Return the challenge as plain text, not JSON
+            return PlainTextResponse(content=challenge, status_code=200)
         else:
             logger.warning("Webhook verification failed")
-            raise HTTPException(status_code=403, detail="Verification failed")
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
-        raise
+            return JSONResponse(content={"detail": "Verification failed"}, status_code=403)
     except Exception as e:
         logger.error(f"Webhook verification error: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -607,7 +1015,7 @@ async def verify_webhook(request: Request):
 @app.post("/api/webhook")
 @limiter.limit("100/minute")
 async def handle_webhook(request: Request):
-    """Handle incoming WhatsApp messages with rate limiting"""
+    """Handle incoming WhatsApp messages with enhanced interactive support"""
     try:
         body = await request.body()
         data = json.loads(body)
@@ -623,17 +1031,30 @@ async def handle_webhook(request: Request):
                         # Process incoming messages
                         for message in value.get("messages", []):
                             from_number = message.get("from")
-                            message_text = message.get("text", {}).get("body", "")
-                            message_id = message.get("id")
+                            message_text = ""
+                            
+                            # Handle different message types
+                            if message.get("text"):
+                                message_text = message.get("text", {}).get("body", "")
+                            elif message.get("image"):
+                                message_text = message.get("image", {}).get("caption", "")
+                            elif message.get("interactive"):
+                                # Handle interactive button/list responses
+                                interactive = message.get("interactive", {})
+                                if interactive.get("type") == "button_reply":
+                                    message_text = interactive.get("button_reply", {}).get("id", "")
+                                elif interactive.get("type") == "list_reply":
+                                    message_text = interactive.get("list_reply", {}).get("id", "")
                             
                             if from_number and message_text:
-                                logger.info(f"Processing message from {from_number}")
+                                logger.info(f"Processing message from {from_number}: {message_text}")
                                 
-                                # Process message and generate response
-                                response = await process_message(from_number, message_text)
+                                # Use enhanced processing with interactive features
+                                response = await enhanced_process_message(from_number, message_text)
                                 
-                                # Send response back
-                                await send_whatsapp_message(from_number, response)
+                                # Send text response only if needed (interactive messages are sent within enhanced_process_message)
+                                if response and not message_text.startswith(("product_", "buy_", "details_", "more_products")):
+                                    await send_whatsapp_message(from_number, response)
         
         return APIResponse(success=True, message="Webhook processed successfully")
         
