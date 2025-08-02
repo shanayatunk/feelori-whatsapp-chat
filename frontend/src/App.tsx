@@ -21,17 +21,12 @@ const queryClient = new QueryClient({
 
 function App(): JSX.Element {
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <div className="min-h-screen bg-gradient-to-br from-feelori-primary via-feelori-primary/80 to-feelori-secondary">
-            <Suspense fallback={<LoadingSpinner />}>
-              <Dashboard />
-            </Suspense>
-          </div>
-        </ToastProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <div className="min-h-screen bg-gradient-to-br from-feelori-primary via-feelori-primary/80 to-feelori-secondary">
+      <div className="p-8">
+        <h1 className="text-4xl font-bold text-white">Feelori AI Assistant - Test</h1>
+        <p className="text-white/80 mt-4">If you can see this text, React is working!</p>
+      </div>
+    </div>
   );
 }
 
