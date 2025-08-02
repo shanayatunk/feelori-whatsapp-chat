@@ -1,24 +1,3 @@
-import React, { Suspense, lazy } from 'react';
-import { QueryClient, QueryClientProvider } from 'react-query';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { ToastProvider } from '@/components/ui/ToastProvider';
-import '@/styles/globals.css';
-
-// Lazy load components for code splitting
-const Dashboard = lazy(() => import('@/pages/Dashboard'));
-
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 10 * 60 * 1000, // 10 minutes
-    },
-  },
-});
-
 import React, { useState } from 'react';
 import { MessageSquare, Users, Package, TrendingUp, Settings, BarChart3, ShoppingBag, Phone, Clock, CheckCircle, Send } from 'lucide-react';
 
