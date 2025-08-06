@@ -1,7 +1,8 @@
 import React from 'react';
 import { useAuth } from './hooks/useAuth';
 import { LoginPage } from './pages/Login';
-import { Dashboard } from './pages/Dashboard';
+// Corrected import statement below
+import Dashboard from './pages/Dashboard'; 
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { ToastProvider } from './components/ui/ToastProvider';
 

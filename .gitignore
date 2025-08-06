@@ -60,3 +60,8 @@ htmlcov/
 *.tmp
 *.temp
 .cache/
+
+# Executables
+*.exe
+*.out
+*.so
