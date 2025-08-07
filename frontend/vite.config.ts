@@ -4,8 +4,9 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
+  // Load env file based on mode (development, production)
   const env = loadEnv(mode, process.cwd(), '')
-  
+
   return {
     plugins: [react()],
     resolve: {
@@ -22,12 +23,10 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: true,
-      allowedHosts: [
-        "496955ca-aa39-4399-9071-3dc797aacf6f.preview.emergentagent.com"
-      ],
       proxy: {
         '/api': {
-          target: env.VITE_BACKEND_URL || 'http://localhost:8001',
+          // Use environment variable for backend URL, default to 8000 for local dev
+          target: env.VITE_BACKEND_URL || 'http://127.0.0.1:8000',
           changeOrigin: true,
           secure: false,
         },

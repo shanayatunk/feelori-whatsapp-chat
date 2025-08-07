@@ -7,15 +7,20 @@ import { useToast } from '@/hooks/useToast';
 export function LoginPage() {
   const [password, setPassword] = useState('');
   const { login, loading } = useAuth();
-  const { showToast } = useToast();
+  // FIX: Destructure the correct 'success' and 'error' functions from the hook.
+  // 'error' is renamed to 'showError' to avoid conflicting with the error variable in the catch block.
+  const { success, error: showError } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Attempting to log in with password:", password);
     try {
       await login(password);
-      showToast('Logged in successfully', { type: 'success' });
+      // FIX: Call the 'success' function for successful login.
+      success('Logged in successfully');
     } catch (error: any) {
-      showToast(error.message || 'Login failed', { type: 'error' });
+      // FIX: Call the 'showError' function for login failures.
+      showError(error.message || 'Login failed');
     }
   };
 
