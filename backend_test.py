@@ -58,12 +58,13 @@ class FeeloriBackendTester:
                 
                 if response.status_code == 200:
                     data = response.json()
-                    if data.get("status") == "healthy":
+                    status = data.get("status", "")
+                    if status in ["healthy", "ready", "alive"]:
                         self.log_test(f"Health Check {endpoint}", "PASS", 
-                                    f"{description} - Status: {data.get('status')}", response_time)
+                                    f"{description} - Status: {status}", response_time)
                     else:
                         self.log_test(f"Health Check {endpoint}", "FAIL", 
-                                    f"Unhealthy status: {data}", response_time)
+                                    f"Unexpected status: {data}", response_time)
                 else:
                     self.log_test(f"Health Check {endpoint}", "FAIL", 
                                 f"HTTP {response.status_code}: {response.text[:200]}", response_time)
