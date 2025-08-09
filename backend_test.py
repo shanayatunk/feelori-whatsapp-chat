@@ -496,7 +496,7 @@ class FeeloriBackendTester:
 async def main():
     """Main test runner"""
     # Get backend URL from environment or use default
-    backend_url = "https://22b31efb-0b4f-409e-9712-bbcdd39a288e.preview.emergentagent.com"
+    backend_url = "http://localhost:8001"
     
     print("Starting Feelori AI WhatsApp Assistant Backend Tests...")
     print(f"Backend URL: {backend_url}")
