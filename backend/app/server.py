@@ -123,7 +123,7 @@ class Settings(BaseSettings):
     jaeger_agent_port: int = 6831
     
     # Environment
-    environment: str = "production"
+    environment: str = Field(default="production", env="ENVIRONMENT")
     
     # API Versioning
     api_version: str = "v1"
