@@ -1,0 +1,135 @@
+[
+  {
+    "test": "Health Check /health",
+    "status": "FAIL",
+    "details": "HTTP 403: Blocked request. This host (\"22b31efb-0b4f-409e-9712-bbcdd39a288e.preview.emergentagent.com\") is not allowed.\nTo allow this host, add \"22b31efb-0b4f-409e-9712-bbcdd39a288e.preview.emergentagent.com\" t",
+    "response_time": 0.07244729995727539,
+    "timestamp": "2025-08-09T11:43:46.167332"
+  },
+  {
+    "test": "Health Check /health/ready",
+    "status": "FAIL",
+    "details": "HTTP 403: Blocked request. This host (\"22b31efb-0b4f-409e-9712-bbcdd39a288e.preview.emergentagent.com\") is not allowed.\nTo allow this host, add \"22b31efb-0b4f-409e-9712-bbcdd39a288e.preview.emergentagent.com\" t",
+    "response_time": 0.011726617813110352,
+    "timestamp": "2025-08-09T11:43:46.179158"
+  },
+  {
+    "test": "Health Check /health/live",
+    "status": "FAIL",
+    "details": "HTTP 403: Blocked request. This host (\"22b31efb-0b4f-409e-9712-bbcdd39a288e.preview.emergentagent.com\") is not allowed.\nTo allow this host, add \"22b31efb-0b4f-409e-9712-bbcdd39a288e.preview.emergentagent.com\" t",
+    "response_time": 0.011220932006835938,
+    "timestamp": "2025-08-09T11:43:46.190478"
+  },
+  {
+    "test": "Root Endpoint",
+    "status": "FAIL",
+    "details": "HTTP 403: Blocked request. This host (\"22b31efb-0b4f-409e-9712-bbcdd39a288e.preview.emergentagent.com\") is not allowed.\nTo allow this host, add \"22b31efb-0b4f-409e-9712-bbcdd39a288e.preview.emergentagent.com\" t",
+    "response_time": 0.00786590576171875,
+    "timestamp": "2025-08-09T11:43:46.198451"
+  },
+  {
+    "test": "Admin Login",
+    "status": "PASS",
+    "details": "Token received, expires in: 86400s",
+    "response_time": 0.2521395683288574,
+    "timestamp": "2025-08-09T11:43:46.450677"
+  },
+  {
+    "test": "Admin Login (Wrong Password)",
+    "status": "PASS",
+    "details": "Correctly rejected invalid password",
+    "response_time": 0.2816746234893799,
+    "timestamp": "2025-08-09T11:43:46.732388"
+  },
+  {
+    "test": "Admin /api/v1/admin/me",
+    "status": "FAIL",
+    "details": "Authentication failed - token may be invalid",
+    "response_time": 0.009604215621948242,
+    "timestamp": "2025-08-09T11:43:46.742044"
+  },
+  {
+    "test": "Admin /api/v1/admin/stats",
+    "status": "FAIL",
+    "details": "Authentication failed - token may be invalid",
+    "response_time": 0.05161738395690918,
+    "timestamp": "2025-08-09T11:43:46.793733"
+  },
+  {
+    "test": "Admin /api/v1/admin/products",
+    "status": "PASS",
+    "details": "Admin products - Data keys: ['success', 'message', 'data', 'timestamp', 'version']",
+    "response_time": 0.3550422191619873,
+    "timestamp": "2025-08-09T11:43:47.148853"
+  },
+  {
+    "test": "Admin Endpoint (No Token)",
+    "status": "PASS",
+    "details": "Correctly rejected request without token",
+    "response_time": 0.010508537292480469,
+    "timestamp": "2025-08-09T11:43:47.159401"
+  },
+  {
+    "test": "WhatsApp Webhook Verification",
+    "status": "PASS",
+    "details": "Webhook verification successful",
+    "response_time": 0.04840588569641113,
+    "timestamp": "2025-08-09T11:43:47.207960"
+  },
+  {
+    "test": "WhatsApp Webhook (Wrong Token)",
+    "status": "PASS",
+    "details": "Correctly rejected wrong verify token",
+    "response_time": 0.011296749114990234,
+    "timestamp": "2025-08-09T11:43:47.219293"
+  },
+  {
+    "test": "WhatsApp Webhook Message",
+    "status": "PASS",
+    "details": "Webhook endpoint accessible, signature validation working (HTTP 403)",
+    "response_time": 0.050911664962768555,
+    "timestamp": "2025-08-09T11:43:47.270243"
+  },
+  {
+    "test": "Rate Limiting",
+    "status": "FAIL",
+    "details": "Too many requests failed: 0/10 succeeded",
+    "response_time": 1.0811915397644043,
+    "timestamp": "2025-08-09T11:43:48.351539"
+  },
+  {
+    "test": "CORS Headers",
+    "status": "PASS",
+    "details": "CORS headers present: {'access-control-allow-origin': 'http://localhost:3000', 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-allow-headers': 'Content-Type,Authorization'}",
+    "response_time": 0.01599264144897461,
+    "timestamp": "2025-08-09T11:43:48.367776"
+  },
+  {
+    "test": "Error Handling /api/v1/nonexistent",
+    "status": "PASS",
+    "details": "Non-existent endpoint - Correctly returned 404",
+    "response_time": 0.008478879928588867,
+    "timestamp": "2025-08-09T11:43:48.376335"
+  },
+  {
+    "test": "Error Handling /api/v1/admin/invalid",
+    "status": "PASS",
+    "details": "Invalid admin endpoint - Correctly returned 404",
+    "response_time": 0.009984493255615234,
+    "timestamp": "2025-08-09T11:43:48.386361"
+  },
+  {
+    "test": "Error Handling /api/v1/auth/invalid",
+    "status": "PASS",
+    "details": "Invalid auth endpoint - Correctly returned 404",
+    "response_time": 0.05165243148803711,
+    "timestamp": "2025-08-09T11:43:48.438053"
+  },
+  {
+    "test": "Security Headers",
+    "status": "WARN",
+    "details": "Limited security headers: {}",
+    "response_time": 0.006421089172363281,
+    "timestamp": "2025-08-09T11:43:48.444553"
+  }
+]
