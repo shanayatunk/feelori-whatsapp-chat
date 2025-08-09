@@ -2,6 +2,12 @@
 
 A production-ready AI-powered WhatsApp assistant for e-commerce customer service, built with FastAPI, React, and MongoDB.
 
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Python](https://img.shields.io/badge/python-3.11+-blue)
+![Node](https://img.shields.io/badge/node-18+-green)
+![Status](https://img.shields.io/badge/status-production--ready-brightgreen)
+
 ## 🚀 Features
 
 ### 🤖 AI-Powered Customer Service
@@ -9,12 +15,14 @@ A production-ready AI-powered WhatsApp assistant for e-commerce customer service
 - **Context-Aware Conversations**: Remembers customer history and preferences
 - **Intelligent Intent Recognition**: Product search, order tracking, customer support
 - **Multi-language Support**: Expandable for international customers
+- **Fallback Responses**: Rule-based responses when AI services are unavailable
 
 ### 📱 WhatsApp Business API Integration
 - **Real-time Message Processing**: Instant responses to customer inquiries
-- **Webhook Support**: Secure message handling with verification
+- **Webhook Support**: Secure message handling with signature verification
 - **Rich Media Support**: Text, images, and structured messages
 - **Rate Limiting**: Protection against spam and abuse
+- **Interactive Lists**: Product catalogs and quick replies
 
 ### 🛍️ Shopify E-commerce Integration
 - **Product Catalog Access**: Real-time product information and availability
@@ -26,289 +34,514 @@ A production-ready AI-powered WhatsApp assistant for e-commerce customer service
 - **Real-time Analytics**: Message statistics, customer metrics, performance insights
 - **Conversation Monitoring**: Live view of AI-customer interactions
 - **System Health Dashboard**: Monitor all integrations and service status
-- **Message Testing**: Send test messages directly from the admin panel
+- **User Management**: Secure admin authentication with JWT tokens
+- **Product Management**: View and manage product catalog
 
 ### 🔒 Production-Ready Security
-- **API Key Authentication**: Secure access to protected endpoints
-- **Rate Limiting**: Comprehensive protection against abuse
+- **JWT Authentication**: Secure admin access with token-based authentication
+- **Rate Limiting**: Comprehensive protection against abuse and DDoS
 - **Input Validation**: Strict validation for phone numbers and messages
 - **CORS Protection**: Secure cross-origin resource sharing
-- **Error Handling**: Graceful failure handling with logging
+- **Security Headers**: XSS and clickjacking protection
+- **Circuit Breakers**: Automatic service protection and graceful degradation
+
+### 🏗️ Robust Architecture
+- **Microservices Ready**: Modular design with service containers
+- **Database Integration**: MongoDB with async Motor driver
+- **Caching Layer**: Redis for performance optimization
+- **Message Queuing**: Redis Streams for reliable message processing
+- **Monitoring & Logging**: Structured JSON logging with multiple levels
+- **Health Checks**: Comprehensive system monitoring endpoints
 
 ## 🏗️ Architecture
 
-### Backend (FastAPI)
-- **Asynchronous Processing**: High-performance async/await patterns
-- **Structured Logging**: JSON-formatted logs for production monitoring
-- **Health Checks**: Comprehensive system monitoring endpoints
-- **Database Integration**: MongoDB with async Motor driver
-- **External APIs**: WhatsApp, Shopify, Gemini, OpenAI integrations
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   WhatsApp      │    │     Admin       │    │   External      │
+│   Business API  │    │   Dashboard     │    │   Services      │
+└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
+          │                      │                      │
+          ▼                      ▼                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    API Gateway (FastAPI)                       │
+├─────────────────────────────────────────────────────────────────┤
+│  Authentication │  Rate Limiting │  Security │  Circuit Breaker│
+├─────────────────┬─────────────────┬─────────────────┬───────────┤
+│   WhatsApp      │      AI         │     Shopify     │   Admin   │
+│   Service       │    Service      │    Service      │  Service  │
+└─────────┬───────┴─────────┬───────┴─────────┬───────┴───────┬───┘
+          │                 │                 │               │
+          ▼                 ▼                 ▼               ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ ┌──────┐
+│     Redis       │ │    MongoDB      │ │  External APIs  │ │ Logs │
+│   (Caching &    │ │  (Customer &    │ │  (Gemini, GPT,  │ │      │
+│   Queuing)      │ │   Messages)     │ │   Shopify)      │ │      │
+└─────────────────┘ └─────────────────┘ └─────────────────┘ └──────┘
+```
 
-### Frontend (React)
-- **Modern UI/UX**: Professional dashboard with Tailwind CSS
-- **Error Boundaries**: Robust error handling and user feedback
-- **Real-time Updates**: Live status monitoring and notifications
-- **Responsive Design**: Mobile-first approach with desktop optimization
-- **Accessibility**: WCAG compliant with ARIA labels and keyboard navigation
+## 🛠️ Tech Stack
 
-### Database (MongoDB)
-- **Customer Management**: Persistent conversation history and preferences
-- **Performance Optimization**: Indexed queries and data validation
-- **Scalable Schema**: Flexible document structure for growth
+### Backend
+- **FastAPI**: High-performance async Python web framework
+- **Python 3.11+**: Modern Python with type hints and async support
+- **MongoDB**: NoSQL database with Motor async driver
+- **Redis**: In-memory caching and message queuing
+- **Pydantic**: Data validation and settings management
+- **JWT**: Token-based authentication
+- **OpenTelemetry**: Distributed tracing and monitoring
+
+### Frontend
+- **React 18**: Modern React with hooks and concurrent features
+- **TypeScript**: Type-safe JavaScript development
+- **Vite**: Fast development server and build tool
+- **Tailwind CSS**: Utility-first CSS framework
+- **Radix UI**: Accessible component primitives
+- **Axios**: HTTP client for API communications
+
+### Infrastructure
+- **Docker**: Containerization support
+- **Supervisor**: Process management
+- **Nginx**: Reverse proxy and load balancing
+- **Let's Encrypt**: SSL certificate management
+
+### External Integrations
+- **Google Gemini**: Primary AI service
+- **OpenAI GPT-4**: Fallback AI service
+- **WhatsApp Business API**: Messaging platform
+- **Shopify API**: E-commerce platform integration
+
+## 📋 Prerequisites
+
+- Python 3.11 or higher
+- Node.js 18 or higher
+- MongoDB 5.0 or higher
+- Redis 6.0 or higher
+- Git
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- MongoDB 5.0+
-- Docker (optional)
+### 1. Clone the Repository
 
-### Development Setup
+```bash
+git clone https://github.com/your-username/feelori-ai-assistant.git
+cd feelori-ai-assistant
+```
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-username/feelori-ai-assistant.git
-   cd feelori-ai-assistant
-   ```
+### 2. Backend Setup
 
-2. **Backend Setup**
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   cp .env.example .env
-   # Edit .env with your API keys
-   uvicorn server:app --reload --port 8001
-   ```
+```bash
+cd backend
 
-3. **Frontend Setup**
-   ```bash
-   cd frontend
-   npm install
-   npm start
-   ```
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-4. **Database Setup**
-   ```bash
-   # Start MongoDB locally or use Docker
-   mongod --dbpath /data/db
-   ```
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy environment template
+cp .env.example .env
+
+# Edit .env file with your configuration
+nano .env
+```
+
+### 3. Frontend Setup
+
+```bash
+cd frontend
+
+# Install dependencies
+yarn install
+
+# Environment is already configured
+```
+
+### 4. Database Setup
+
+```bash
+# Start MongoDB (if not already running)
+sudo systemctl start mongod
+
+# Start Redis (if not already running)
+sudo systemctl start redis
+```
+
+### 5. Run the Application
+
+```bash
+# Start backend (in backend directory)
+uvicorn app.server:app --host 0.0.0.0 --port 8001 --reload
+
+# Start frontend (in frontend directory)
+yarn dev
+```
+
+### 6. Access the Application
+
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8001
+- **API Documentation**: http://localhost:8001/docs
+- **Admin Login**: Use password from your .env file
+
+## ⚙️ Configuration
 
 ### Environment Variables
 
-Create a `.env` file in the backend directory with the following:
+Create a `.env` file in the `backend` directory:
 
-```env
+```bash
+# Database
+MONGO_ATLAS_URI=mongodb://localhost:27017/feelori_assistant
+
 # WhatsApp Business API
 WHATSAPP_ACCESS_TOKEN=your_whatsapp_token
 WHATSAPP_PHONE_ID=your_phone_id
 WHATSAPP_VERIFY_TOKEN=your_verify_token
+WHATSAPP_WEBHOOK_SECRET=your_webhook_secret
 
 # Shopify API
 SHOPIFY_STORE_URL=your-store.myshopify.com
 SHOPIFY_ACCESS_TOKEN=your_shopify_token
 
-# AI Models
+# AI Services
 GEMINI_API_KEY=your_gemini_key
 OPENAI_API_KEY=your_openai_key
 
-# Database
-MONGO_URL=mongodb://localhost:27017/feelori_assistant
-
 # Security
-ADMIN_API_KEY=your_secure_admin_key
+JWT_SECRET_KEY=your_secure_jwt_secret_key_minimum_32_characters
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRE_HOURS=24
+ADMIN_PASSWORD=your_secure_admin_password
+SESSION_SECRET_KEY=your_secure_session_secret_key_minimum_32_characters
+API_KEY=your_api_key_for_metrics_access
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# Environment
+ENVIRONMENT=production
 ```
 
-## 📚 API Documentation
+### Security Configuration
 
-### Endpoints
-
-#### Public Endpoints
-- `GET /` - API information
-- `GET /api/health` - System health check
-- `GET /api/products` - Product catalog (rate limited)
-- `GET /api/webhook` - WhatsApp webhook verification
-- `POST /api/webhook` - WhatsApp message processing
-
-#### Protected Endpoints (Require API Key)
-- `POST /api/send-message` - Send WhatsApp message
-- `GET /api/customers/{phone}` - Customer information
-- `GET /api/orders/{phone}` - Customer orders
-- `GET /api/metrics` - System metrics
-
-### Authentication
-
-Protected endpoints require an `Authorization` header:
-```
-Authorization: Bearer your_admin_api_key
-```
-
-### Rate Limits
-- Health endpoint: 60 requests/minute
-- Products endpoint: 30 requests/minute
-- Send message: 10 requests/minute
-- Webhook: 100 requests/minute
-
-## 🧪 Testing
-
-### Backend Tests
-```bash
-cd backend
-pytest tests/test_api.py -v
-```
-
-### Frontend Tests
-```bash
-cd frontend
-npm test
-```
-
-### Integration Tests
-```bash
-python tests/test_integration.py
-```
-
-## 🚀 Production Deployment
-
-### Docker Deployment
-```bash
-docker-compose -f deployment/docker-compose.prod.yml up -d
-```
-
-### Manual Deployment
-1. **Build Frontend**
+1. **Generate Secure Keys**:
    ```bash
-   cd frontend
-   npm run build
+   python -c "import secrets; print(secrets.token_hex(32))"
    ```
 
-2. **Deploy Backend**
-   ```bash
-   cd backend
-   gunicorn server:app -w 4 -k uvicorn.workers.UvicornWorker
-   ```
+2. **Set Strong Admin Password**: Minimum 12 characters with mixed case, numbers, and symbols
 
-3. **Configure Nginx**
-   ```bash
-   cp deployment/nginx/nginx.conf /etc/nginx/sites-available/feelori-ai
-   ln -s /etc/nginx/sites-available/feelori-ai /etc/nginx/sites-enabled/
-   systemctl reload nginx
-   ```
+3. **Configure CORS**: Update `CORS_ALLOWED_ORIGINS` for your domain
 
-### WhatsApp Webhook Setup
-1. Configure webhook URL in WhatsApp Business API dashboard:
-   ```
-   https://your-domain.com/api/webhook
-   ```
-2. Set verify token to match `WHATSAPP_VERIFY_TOKEN`
-3. Subscribe to `messages` events
+### WhatsApp Business API Setup
 
-## 📊 Monitoring & Observability
+1. **Create WhatsApp Business Account**
+2. **Set up Webhook URL**: `https://your-domain.com/api/v1/webhook`
+3. **Configure Verification Token**: Set in WhatsApp dashboard
+4. **Subscribe to Message Events**
 
-### Structured Logging
-All logs are in JSON format for easy parsing:
-```json
+### Shopify Integration Setup
+
+1. **Create Private App in Shopify**
+2. **Generate Access Token** with required permissions:
+   - Products: Read access
+   - Orders: Read access
+   - Customers: Read access
+
+## 📖 API Documentation
+
+### Authentication Endpoints
+
+#### Login
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
+
 {
-  "timestamp": "2024-01-01T12:00:00Z",
-  "level": "INFO",
-  "message": "Message processed successfully",
-  "module": "server"
+  "password": "your_admin_password"
 }
 ```
 
+Response:
+```json
+{
+  "access_token": "jwt_token_here",
+  "token_type": "bearer",
+  "expires_in": 86400
+}
+```
+
+### Admin Endpoints
+
+All admin endpoints require Bearer token authentication:
+```http
+Authorization: Bearer your_jwt_token
+```
+
+#### Get Admin Profile
+```http
+GET /api/v1/admin/me
+```
+
+#### Get System Statistics
+```http
+GET /api/v1/admin/stats
+```
+
+#### Get Products
+```http
+GET /api/v1/admin/products
+```
+
+### WhatsApp Webhook Endpoints
+
+#### Webhook Verification
+```http
+GET /api/v1/webhook?hub.mode=subscribe&hub.challenge=challenge&hub.verify_token=token
+```
+
+#### Message Processing
+```http
+POST /api/v1/webhook
+Content-Type: application/json
+```
+
+### Health Check Endpoints
+
+#### Basic Health Check
+```http
+GET /health
+```
+
+#### Readiness Probe
+```http
+GET /health/ready
+```
+
+#### Liveness Probe
+```http
+GET /health/live
+```
+
+For complete API documentation, visit: http://localhost:8001/docs
+
+## 🚀 Deployment
+
+### Docker Deployment
+
+```bash
+# Build and start services
+docker-compose -f deployment/docker-compose.prod.yml up -d
+```
+
+### Manual Production Deployment
+
+1. **Build Frontend**:
+   ```bash
+   cd frontend
+   yarn build
+   ```
+
+2. **Configure Nginx**:
+   ```bash
+   sudo cp deployment/nginx/nginx.conf /etc/nginx/sites-available/feelori-ai
+   sudo ln -s /etc/nginx/sites-available/feelori-ai /etc/nginx/sites-enabled/
+   sudo systemctl reload nginx
+   ```
+
+3. **Start Backend with Gunicorn**:
+   ```bash
+   cd backend
+   gunicorn app.server:app -w 4 -k uvicorn.workers.UvicornWorker
+   ```
+
+4. **Set up SSL with Let's Encrypt**:
+   ```bash
+   sudo certbot --nginx -d your-domain.com
+   ```
+
+### Environment-Specific Configurations
+
+#### Production
+- Use production database (MongoDB Atlas recommended)
+- Enable SSL/HTTPS
+- Set up monitoring and alerting
+- Configure backup strategies
+- Use production-grade Redis cluster
+
+#### Staging
+- Use separate database instance
+- Enable debug logging
+- Test with production-like data
+- Validate all integrations
+
+## 📊 Monitoring & Maintenance
+
 ### Health Monitoring
-The `/api/health` endpoint provides comprehensive system status:
-- Database connectivity
-- External API status
-- AI model availability
-- Service health metrics
 
-### Performance Metrics
-- Response times
-- Error rates
-- Message processing volume
-- Customer engagement metrics
+The application provides several health check endpoints:
 
-## 🔧 Configuration
+- `/health` - Basic application health
+- `/health/ready` - Kubernetes readiness probe
+- `/health/live` - Kubernetes liveness probe
+- `/health/comprehensive` - Detailed system health (requires API key)
 
-### AI Model Configuration
-The system supports multiple AI providers with automatic failover:
-1. **Primary**: Google Gemini (fast, cost-effective)
-2. **Fallback**: OpenAI GPT-4 (reliable, high-quality)
-3. **Error Handling**: Graceful degradation with helpful messages
+### Logging
 
-### Customization Options
-- **AI Prompts**: Modify system prompts in `server.py`
-- **UI Themes**: Customize colors and styling in `App.css`
-- **Business Logic**: Extend intent recognition and response generation
-- **Integrations**: Add new e-commerce platforms or communication channels
+Structured JSON logging is implemented with different levels:
+- **ERROR**: Critical issues requiring immediate attention
+- **WARNING**: Important events that need monitoring
+- **INFO**: General application flow
+- **DEBUG**: Detailed debugging information
 
-## 🛡️ Security Best Practices
+### Metrics
 
-### Implemented Security Measures
-- **API Key Authentication**: Secure endpoint protection
-- **Rate Limiting**: DDoS and abuse protection
-- **Input Validation**: Comprehensive data sanitization
-- **HTTPS Only**: Encrypted communication
-- **CORS Protection**: Secure cross-origin requests
-- **Security Headers**: XSS, clickjacking protection
+Prometheus metrics available at `/metrics` endpoint (requires API key):
+- Request rates and response times
+- Error rates and types
+- Database operation metrics
+- AI service usage statistics
+- WhatsApp message processing metrics
 
-### Security Checklist
-- [ ] Change default API keys
-- [ ] Configure proper CORS origins
-- [ ] Set up SSL certificates
-- [ ] Enable firewall rules
-- [ ] Regular security updates
-- [ ] Monitor access logs
+### Backup Strategy
 
-## 📈 Scaling Considerations
+1. **Database Backup**:
+   ```bash
+   mongodump --uri="mongodb://localhost:27017/feelori_assistant"
+   ```
 
-### Horizontal Scaling
-- **Backend**: Multiple FastAPI instances behind load balancer
-- **Database**: MongoDB replica sets or sharding
-- **Cache**: Redis cluster for session management
-- **CDN**: Static asset distribution
+2. **Configuration Backup**:
+   - Backup all `.env` files
+   - Backup nginx configurations
+   - Backup SSL certificates
 
-### Performance Optimization
-- **Database Indexing**: Optimize query performance
-- **Caching**: Redis for frequently accessed data
-- **Message Queuing**: For high-volume message processing
-- **Connection Pooling**: Efficient database connections
+3. **Automated Backup Script**:
+   ```bash
+   #!/bin/bash
+   DATE=$(date +%Y%m%d_%H%M%S)
+   mongodump --uri="$MONGO_ATLAS_URI" --out="/backups/mongo_$DATE"
+   tar -czf "/backups/config_$DATE.tar.gz" backend/.env frontend/.env
+   ```
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### Backend Won't Start
+1. Check if MongoDB and Redis are running
+2. Verify environment variables are set correctly
+3. Ensure all dependencies are installed
+4. Check logs: `tail -f /var/log/supervisor/backend.err.log`
+
+#### Authentication Failures
+1. Verify JWT_SECRET_KEY is set and correct
+2. Check admin password configuration
+3. Ensure token hasn't expired
+4. Verify CORS settings for frontend domain
+
+#### WhatsApp Webhook Issues
+1. Verify webhook URL is accessible from internet
+2. Check WHATSAPP_VERIFY_TOKEN matches dashboard setting
+3. Ensure webhook signature verification is working
+4. Test with WhatsApp webhook tester
+
+#### AI Service Failures
+1. Verify API keys are valid and have sufficient quota
+2. Check rate limiting on AI services
+3. Ensure fallback responses are working
+4. Monitor AI service status pages
+
+### Debug Mode
+
+Enable debug logging by setting:
+```bash
+ENVIRONMENT=development
+```
+
+### Performance Issues
+
+1. **Check Database Performance**:
+   ```bash
+   # Monitor MongoDB operations
+   mongostat
+   
+   # Check slow queries
+   db.setProfilingLevel(2)
+   db.system.profile.find().sort({ts:-1}).limit(5)
+   ```
+
+2. **Monitor Redis Performance**:
+   ```bash
+   redis-cli info stats
+   redis-cli monitor
+   ```
+
+3. **Check Memory Usage**:
+   ```bash
+   ps aux | grep -E "(python|node)"
+   free -h
+   ```
+
+### Getting Help
+
+1. **Check Application Logs**:
+   ```bash
+   # Backend logs
+   tail -f /var/log/supervisor/backend.out.log
+   
+   # Frontend logs
+   tail -f /var/log/supervisor/frontend.out.log
+   ```
+
+2. **API Health Check**:
+   ```bash
+   curl -s http://localhost:8001/health | jq
+   ```
+
+3. **Test Database Connection**:
+   ```bash
+   mongo $MONGO_ATLAS_URI --eval "db.adminCommand('ping')"
+   ```
 
 ## 🤝 Contributing
 
-### Development Workflow
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
+1. **Fork the Repository**
+2. **Create Feature Branch**: `git checkout -b feature/amazing-feature`
+3. **Make Changes**: Follow code style and add tests
+4. **Run Tests**: `pytest backend/tests/` and `yarn test`
+5. **Commit Changes**: `git commit -m 'Add amazing feature'`
+6. **Push to Branch**: `git push origin feature/amazing-feature`
+7. **Open Pull Request**
 
-### Code Standards
-- **Python**: Follow PEP 8, use type hints
-- **JavaScript**: Use ESLint and Prettier
-- **Git**: Conventional commit messages
-- **Documentation**: Update README for new features
+### Development Guidelines
 
-## 📝 License
+- Follow PEP 8 for Python code
+- Use TypeScript for all new frontend code
+- Add tests for new functionality
+- Update documentation for API changes
+- Follow semantic versioning
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
 - **WhatsApp Business API** for messaging infrastructure
-- **Shopify** for e-commerce integration
-- **Google Gemini** and **OpenAI** for AI capabilities
+- **Shopify** for e-commerce integration capabilities
+- **Google Gemini** and **OpenAI** for AI/ML capabilities
 - **FastAPI** and **React** communities for excellent frameworks
+- **MongoDB** and **Redis** for reliable data storage
 
 ## 📞 Support
 
-For technical support or questions:
+- **Documentation**: See `docs/` directory for detailed guides
+- **Issues**: Report bugs on GitHub Issues
 - **Email**: support@feelori.com
-- **Issues**: GitHub Issues
-- **Documentation**: [Wiki](https://github.com/your-username/feelori-ai-assistant/wiki)
 
 ---
 
-**Built with ❤️ for Feelori customers**
+**Built with ❤️ for enhanced customer experience**
+
+*Last updated: August 2025*
