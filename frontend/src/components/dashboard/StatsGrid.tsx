@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MessageSquare, Users, Package, TrendingUp } from 'lucide-react';
 import { DashboardStats } from '@/types';
@@ -16,11 +16,21 @@ const statDetails = {
 };
 
 export const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
+  // Handle undefined stats
+  if (!stats) {
+    return <div className="text-white">Error: No stats provided</div>;
+  }
+
   const statsArray = Object.entries(stats).map(([key, value]) => {
-    const details = statDetails[key as keyof DashboardStats];
+    const details = statDetails[key as keyof DashboardStats] || {
+      label: key,
+      icon: MessageSquare,
+      badgeClass: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+      change: 'N/A',
+    };
     return {
       ...details,
-      value,
+      value: value ?? 0, // Fallback to 0 if value is undefined
     };
   });
 
@@ -30,6 +40,9 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
         const Icon = stat.icon;
         return (
           <Card key={stat.label} className="card-feelori">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-white">{stat.label}</CardTitle>
+            </CardHeader>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-feelori-primary/20 rounded-xl">
@@ -39,7 +52,6 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
                   <p className="text-2xl font-bold text-white">
                     {stat.value.toLocaleString()}
                   </p>
-                  <p className="text-white/70 text-sm">{stat.label}</p>
                   <Badge className={`mt-1 ${stat.badgeClass}`}>
                     {stat.change} this week
                   </Badge>
@@ -52,3 +64,5 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
     </div>
   );
 };
+
+export default StatsGrid;

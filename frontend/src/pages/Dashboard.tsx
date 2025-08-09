@@ -1,3 +1,4 @@
+// frontend/src/pages/Dashboard.tsx
 import React, { useState, Suspense, lazy } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -33,6 +34,7 @@ const Dashboard: React.FC = () => {
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       
       <main className="flex-1 p-6 overflow-y-auto bg-white/5 backdrop-blur-sm">
+        {/* REMOVED data-testid from here - it's now only on the h1 in DashboardTab */}
         <div className="max-w-7xl mx-auto">
           {renderTabContent()}
         </div>

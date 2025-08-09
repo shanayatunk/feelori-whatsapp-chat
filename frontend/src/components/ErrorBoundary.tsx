@@ -1,6 +1,8 @@
-import React, { Component, ReactNode } from 'react';
+// frontend/src/components/ErrorBoundary.tsx
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface Props {
   children: ReactNode;
@@ -9,101 +11,105 @@ interface Props {
 
 interface State {
   hasError: boolean;
-  error: Error | null;
-  errorInfo: any;
+  error?: Error;
+  errorInfo?: ErrorInfo;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: null,
-      errorInfo: null,
-    };
-  }
+  public state: State = {
+    hasError: false
+  };
 
-  static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): State {
     return {
       hasError: true,
-      error,
-      errorInfo: null,
+      error
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: any) {
-    console.error('Error caught by boundary:', error, errorInfo);
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    
     this.setState({
       error,
-      errorInfo,
+      errorInfo
     });
+
+    // In production, you might want to report this to an error tracking service
+    if (import.meta.env.PROD) {
+      // Report to error tracking service
+      console.error('Production error:', {
+        error: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack
+      });
+    }
   }
 
-  handleReload = () => {
+  private handleReload = () => {
     window.location.reload();
   };
 
-  handleReset = () => {
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null,
-    });
+  private handleRetry = () => {
+    this.setState({ hasError: false, error: undefined, errorInfo: undefined });
   };
 
-  render() {
+  public render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-feelori-primary via-feelori-primary/80 to-feelori-secondary p-4">
-          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 max-w-md w-full text-center">
-            <div className="flex justify-center mb-6">
-              <div className="p-4 bg-feelori-primary/20 rounded-full">
-                <AlertCircle size={48} className="text-white" />
+        <div className="min-h-screen bg-gradient-to-br from-feelori-primary via-feelori-primary/80 to-feelori-secondary flex items-center justify-center p-4">
+          <Card className="glass-card max-w-md w-full">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-400" />
+                Something went wrong
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-white/80">
+                <p className="mb-4">
+                  The application encountered an unexpected error. This has been logged for our development team.
+                </p>
+                
+                {!import.meta.env.PROD && this.state.error && (
+                  <details className="bg-white/5 p-3 rounded-lg text-xs">
+                    <summary className="cursor-pointer text-white/60 hover:text-white">
+                      Error Details (Development)
+                    </summary>
+                    <div className="mt-2 font-mono">
+                      <div className="text-red-400 mb-2">
+                        {this.state.error.name}: {this.state.error.message}
+                      </div>
+                      <div className="text-white/50 text-[10px]">
+                        {this.state.error.stack}
+                      </div>
+                    </div>
+                  </details>
+                )}
               </div>
-            </div>
-            
-            <h2 className="text-2xl font-bold text-white mb-4">
-              Oops! Something went wrong
-            </h2>
-            
-            <p className="text-white/80 mb-6">
-              We encountered an unexpected error. This has been logged and we'll look into it.
-            </p>
-            
-            <div className="space-y-3">
-              <Button
-                onClick={this.handleReset}
-                className="w-full bg-feelori-primary hover:bg-feelori-primary/90"
-              >
-                <RefreshCw size={16} className="mr-2" />
-                Try Again
-              </Button>
-              
-              <Button
-                onClick={this.handleReload}
-                variant="outline"
-                className="w-full border-white/20 text-white hover:bg-white/10"
-              >
-                Reload Page
-              </Button>
-            </div>
-            
-            {process.env.NODE_ENV === 'development' && this.state.error && (
-              <details className="mt-6 text-left">
-                <summary className="text-sm text-white/60 cursor-pointer">
-                  Error Details (Development)
-                </summary>
-                <pre className="mt-2 text-xs text-white/50 bg-black/20 p-3 rounded overflow-auto">
-                  {this.state.error.toString()}
-                  {this.state.errorInfo?.componentStack}
-                </pre>
-              </details>
-            )}
-          </div>
+
+              <div className="flex gap-3">
+                <Button 
+                  onClick={this.handleRetry}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Try Again
+                </Button>
+                <Button 
+                  onClick={this.handleReload}
+                  className="flex-1"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Reload Page
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       );
     }
@@ -111,3 +117,18 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
+
+// Usage in App.tsx
+/*
+function App(): JSX.Element {
+  return (
+    <ErrorBoundary>
+      <ToastProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </ToastProvider>
+    </ErrorBoundary>
+  );
+}
+*/

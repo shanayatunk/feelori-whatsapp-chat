@@ -1,81 +1,66 @@
+// frontend/src/components/dashboard/QuickActions.tsx
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Send, Loader2 } from 'lucide-react';
-import { useSendMessage } from '@/hooks/useApi';
-import { useToast } from '@/hooks/useToast';
-import { validatePhoneNumber, formatPhoneNumber } from '@/lib/utils';
+  import { Textarea } from '@/components/ui/textarea';
+  import { Send, Loader2, Zap } from 'lucide-react';
+  import { useBroadcastMessage } from '@/hooks/useApi';
+  import { useToast } from '@/hooks/useToast';
 
-export const QuickActions: React.FC = () => {
-  const [testPhone, setTestPhone] = useState('');
-  const [testMessage, setTestMessage] = useState('');
-  const { sendMessage, loading: messageLoading } = useSendMessage();
-  const { success, error } = useToast();
+  export const QuickActions: React.FC = () => {
+    const [broadcastMessage, setBroadcastMessage] = useState('');
+    const { broadcast, loading } = useBroadcastMessage();
+    const { success: showSuccess, error: showError } = useToast();
 
-  const handleSendTestMessage = async () => {
-    if (!testPhone || !testMessage) {
-      error('Please enter both phone number and message');
-      return;
-    }
+    const handleBroadcast = async () => {
+      if (!broadcastMessage.trim()) {
+        showError('Please enter a broadcast message.');
+        return;
+      }
 
-    const formattedPhone = formatPhoneNumber(testPhone);
-    if (!validatePhoneNumber(formattedPhone)) {
-      error('Please enter a valid phone number with country code (e.g., +1234567890)');
-      return;
-    }
+      try {
+        const response = await broadcast(broadcastMessage, 'all');
+        if (response.success) {
+          showSuccess(`Broadcast sent sent to ${response.data?.sent_count || 0} customers!`);
+          setBroadcastMessage('');
+        }
+      } catch (err: any) {
+        showError(err.message || 'Failed to send broadcast.');
+      }
+    };
 
-    try {
-      await sendMessage(formattedPhone, testMessage);
-      success('Message sent successfully!');
-      setTestPhone('');
-      setTestMessage('');
-    } catch (err) {
-      error(err instanceof Error ? err.message : 'Failed to send message');
-    }
-  };
-
-  return (
-    <div>
-      <Card className="card-feelori">
-        <CardHeader>
-          <CardTitle className="text-white">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-4">
-            <h4 className="text-white font-semibold">Send Test Message</h4>
-
-            <Input
-              placeholder="Phone number (e.g., +1234567890)"
-              value={testPhone}
-              onChange={(e) => setTestPhone(e.target.value)}
-              className="input-feelori"
-            />
-
+    return (
+      <div className="lg:col-span-1">
+        <Card className="bg-white/5 border-white/10 backdrop-blur-lg">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Zap className="w-5 h-5" />
+              Quick Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <h4 className="text-white font-semibold">Send Broadcast Message</h4>
             <Textarea
-              placeholder="Test message..."
-              value={testMessage}
-              onChange={(e) => setTestMessage(e.target.value)}
-              className="input-feelori resize-none"
-              rows={3}
+              placeholder="Enter a message to send to all customers..."
+              value={broadcastMessage}
+              onChange={(e) => setBroadcastMessage(e.target.value)}
+              className="bg-white/10 border-white/20 text-white placeholder-white/50 resize-none"
+              rows={4}
             />
-
             <Button
-              onClick={handleSendTestMessage}
-              disabled={messageLoading}
-              className="w-full btn-feelori"
+              onClick={handleBroadcast}
+              disabled={loading}
+              className="w-full"
             >
-              {messageLoading ? (
+              {loading ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
                 <Send className="w-4 h-4 mr-2" />
               )}
-              {messageLoading ? 'Sending...' : 'Send Test Message'}
+              {loading ? 'Sending...' : 'Send Broadcast'}
             </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
